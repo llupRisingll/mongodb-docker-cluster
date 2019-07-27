@@ -1,0 +1,88 @@
+version: "3.0"
+
+volumes:
+  init-mongo-keys:
+  init-mongo-data-0:
+  init-mongo-data-1:
+  init-mongo-data-2:
+  init-mongo-data-3:
+
+networks:
+  init-replica-set:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.10.5.0/24
+
+services:
+
+  init-mongo-keys:
+    image: depop/openssl-bats
+    volumes:
+      - init-mongo-keys:/mongo-conf
+    command: 'bash -c "openssl rand -base64 741 > /mongo-conf/mongodb-keyfile; chmod 600 /mongo-conf/mongodb-keyfile; chown 999 /mongo-conf/mongodb-keyfile"'
+
+  # Primary
+  init-mongo-primary:
+    image: mongo:latest
+    volumes:
+      - init-mongo-keys:/opt/keyfile
+      - init-mongo-data-0:/data/db
+    env_file:
+      ./mongod.env
+    ports:
+      - 27017:27017
+    command: 'mongod --smallfiles --auth --keyFile /opt/keyfile/mongodb-keyfile --replSet init-replica-set'
+    depends_on:
+        - init-mongo-keys
+    networks:
+      init-replica-set:
+  
+  # Worker 1
+  init-mongo-worker-1:
+    image: mongo:latest
+    volumes:
+      - init-mongo-keys:/opt/keyfile
+      - init-mongo-data-1:/data/db
+    env_file:
+      ./mongod.env
+    ports:
+      - 27018:27017
+    command: 'mongod --smallfiles --auth --keyFile /opt/keyfile/mongodb-keyfile --replSet init-replica-set'
+    depends_on:
+        - init-mongo-keys
+    networks:
+      init-replica-set:
+  
+  # Worker 2
+  init-mongo-worker-2:
+    image: mongo:latest
+    volumes:
+      - init-mongo-keys:/opt/keyfile
+      - init-mongo-data-2:/data/db
+    env_file:
+      ./mongod.env
+    ports:
+      - 27019:27017
+    command: 'mongod --smallfiles --auth --keyFile /opt/keyfile/mongodb-keyfile --replSet init-replica-set'
+    depends_on:
+        - init-mongo-keys
+    networks:
+      init-replica-set:
+  
+  # Worker 3
+  init-mongo-worker-3:
+    image: mongo:latest
+    volumes:
+      - init-mongo-keys:/opt/keyfile
+      - init-mongo-data-3:/data/db
+    env_file:
+      ./mongod.env
+    ports:
+      - 27020:27017
+    command: 'mongod --smallfiles --auth --keyFile /opt/keyfile/mongodb-keyfile --replSet init-replica-set'
+    depends_on:
+        - init-mongo-keys
+    networks:
+      init-replica-set:
